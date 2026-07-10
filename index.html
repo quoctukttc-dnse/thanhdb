@@ -59,6 +59,15 @@
   .flag{top:-1px;width:0;height:0;}
   .star{top:1px;font-size:12px;line-height:1;color:var(--store);}
   .po{top:2px;font-size:9px;line-height:1;color:var(--po);}
+  .bd{margin:4px 0 22px;padding:14px 16px;background:var(--panel);border-radius:12px;}
+  .bd-h{font-size:13px;font-weight:600;margin-bottom:12px;color:var(--ink);}
+  .bd-row{display:flex;align-items:center;gap:10px;margin-bottom:9px;}
+  .bd-lab{width:150px;flex:0 0 150px;font-size:12px;color:var(--ink);}
+  .bd-track{flex:1;min-width:0;}
+  .bd-fill{display:flex;height:20px;border-radius:4px;overflow:hidden;}
+  .bd-seg{height:100%;display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff;overflow:hidden;font-variant-numeric:tabular-nums;}
+  .bd-badge{flex:0 0 auto;font-size:12px;font-weight:600;padding:2px 10px;border-radius:11px;white-space:nowrap;}
+  .bd-cap{font-size:11px;color:var(--muted);margin-top:8px;line-height:1.5;}
   .foot{font-size:12px;color:var(--muted);margin-top:22px;line-height:1.6;}
   .tip{position:fixed;z-index:50;pointer-events:none;background:var(--ink);color:var(--bg);
     font-size:12px;padding:5px 9px;border-radius:6px;white-space:nowrap;opacity:0;transition:opacity .1s;
@@ -99,6 +108,8 @@
     <span><i class="mk" style="color:var(--store)">★</i>In store</span>
   </div>
 
+  <div id="breakdown" style="display:none;"></div>
+
   <div class="months" id="months" style="display:none;"></div>
   <div id="gantt"></div>
 
@@ -117,6 +128,11 @@ const SAMPLE=[
  {"title":"Model 2: Current method - Progressive Leadtime for Best Demand","lt":93,"greige":["2026-05-19","2026-07-03"],"rows":[{"l":"1st batch shipment","fgpo":"2026-06-25","dyed":["2026-06-28","2026-07-12"],"transit":["2026-07-13","2026-07-16"],"fg":["2026-07-17","2026-08-07"],"transport":["2026-08-08","2026-10-02"],"store":"2026-12-15","sales":["2026-12-14","2027-04-04"]},{"l":"1st batch shipment","fgpo":"2026-06-25","dyed":["2026-07-13","2026-07-27"],"transit":["2026-07-28","2026-07-31"],"fg":["2026-08-08","2026-08-29"],"transport":["2026-08-30","2026-10-24"],"store":"2026-12-15","sales":["2026-12-14","2027-04-04"]},{"l":"1st batch shipment","fgpo":"2026-06-25","dyed":["2026-07-28","2026-08-11"],"transit":["2026-08-12","2026-08-15"],"fg":["2026-08-30","2026-09-20"],"transport":["2026-09-21","2026-11-15"],"store":"2026-12-15","sales":["2026-12-14","2027-04-04"]},{"l":"2rd batch shipment","fgpo":"2026-08-15","dyed":["2026-08-18","2026-09-01"],"transit":["2026-09-04","2026-09-07"],"fg":["2026-09-21","2026-10-12"],"transport":["2026-10-13","2026-12-07"],"store":"2027-01-07","sales":["2027-03-01","2027-05-02"]},{"l":"3nd batch shipment","fgpo":"2026-09-15","dyed":["2026-09-18","2026-10-02"],"transit":["2026-10-03","2026-10-06"],"fg":["2026-10-13","2026-11-03"],"transport":["2026-11-04","2026-12-29"],"store":"2027-01-29","sales":["2027-04-05","2027-07-11"]}]},
  {"title":"Model 3: New method - Progressive Leadtime for Best Demand","lt":83,"greige":["2026-05-19","2026-07-03"],"rows":[{"l":"1st batch shipment","fgpo":"2026-06-25","dyed":["2026-06-28","2026-07-12"],"transit":["2026-07-13","2026-07-16"],"fg":["2026-07-17","2026-08-07"],"transport":["2026-08-08","2026-10-02"],"store":"2026-12-15","sales":["2026-12-14","2027-02-28"]},{"l":"1st batch shipment","fgpo":"2026-06-25","dyed":["2026-07-13","2026-07-27"],"transit":["2026-07-28","2026-07-31"],"fg":["2026-08-08","2026-08-29"],"transport":["2026-08-30","2026-10-24"],"store":null,"sales":["2026-12-14","2027-02-28"]},{"l":"1st batch shipment","fgpo":"2026-06-25","dyed":["2026-07-28","2026-08-11"],"transit":["2026-08-12","2026-08-15"],"fg":["2026-08-30","2026-09-20"],"transport":["2026-09-21","2026-11-15"],"store":null,"sales":["2026-12-14","2027-02-28"]},{"l":"Implantation order","fgpo":"2026-08-15","dyed":["2026-08-18","2026-09-01"],"transit":["2026-09-04","2026-09-07"],"fg":["2026-09-21","2026-10-12"],"transport":["2026-10-13","2026-11-27"],"store":"2026-12-28","sales":["2027-01-04","2027-02-28"]},{"l":"Implantation order","fgpo":"2026-09-05","dyed":["2026-09-08","2026-09-22"],"transit":["2026-09-23","2026-09-26"],"fg":["2026-10-13","2026-11-03"],"transport":["2026-11-04","2026-12-19"],"store":"2027-01-19","sales":["2027-01-18","2027-03-14"]},{"l":"Replenishment order","fgpo":"2026-09-26","dyed":["2026-09-29","2026-10-13"],"transit":["2026-10-14","2026-10-17"],"fg":["2026-11-04","2026-11-25"],"transport":["2026-11-26","2027-01-10"],"store":"2027-02-10","sales":["2027-02-01","2027-04-04"]},{"l":"Replenishment order","fgpo":"2026-10-17","dyed":["2026-10-20","2026-11-03"],"transit":["2026-11-04","2026-11-07"],"fg":["2026-11-26","2026-12-17"],"transport":["2026-12-18","2027-02-01"],"store":null,"sales":["2027-02-15","2027-05-02"]},{"l":"Replenishment order","fgpo":"2026-11-07","dyed":["2026-11-10","2026-11-25"],"transit":["2026-11-26","2026-11-29"],"fg":["2026-12-18","2027-01-08"],"transport":["2027-01-09","2027-02-23"],"store":null,"sales":["2027-03-01","2027-06-06"]},{"l":"Replenishment order","fgpo":"2026-11-28","dyed":["2026-12-01","2026-12-15"],"transit":["2026-12-16","2026-12-19"],"fg":["2026-12-20","2027-01-10"],"transport":["2027-01-11","2027-02-25"],"store":null,"sales":["2027-03-15","2027-07-11"]},{"l":"Replenishment order","fgpo":"2026-12-19","dyed":["2026-12-22","2027-01-05"],"transit":["2027-01-06","2027-01-09"],"fg":["2027-01-10","2027-01-31"],"transport":["2027-02-01","2027-03-18"],"store":null,"sales":["2027-03-29","2027-07-11"]}]}
 ];
+
+const SAMPLE_BD={stages:["Greige","Dyeing + trims","RM transit","Sewing (FG)","FG shipping → DC"],rows:[
+ {name:"Normal leadtime",days:[45,28,7,28,60],total:168,fromOrder:123},
+ {name:"Progressive Leadtime for best demand apply for new model",days:[45,14,3,21,45],total:128,fromOrder:83}
+]};
 
 const $=id=>document.getElementById(id);
 const isDate=v=>v instanceof Date && !isNaN(v);
@@ -164,7 +180,26 @@ function parseSheet(aoa){
     }
   }
   models.forEach(m=>{let n=0;m.rows.forEach(r=>{n++;if(!r.l)r.l="Lot "+n;});delete m.weekCols;});
-  return models.filter(m=>m.rows.length);
+  return {models:models.filter(m=>m.rows.length), breakdown:parseBreakdown(aoa)};
+}
+
+function parseBreakdown(aoa){
+  const rows=[];
+  for(let i=0;i<aoa.length;i++){
+    const row=aoa[i]; if(!row) continue;
+    const m=firstStr(row[12]);
+    if(/leadtime/i.test(m) && typeof row[14]==="number"){
+      let fromOrder=null;
+      for(let k=i;k<Math.min(i+3,aoa.length);k++){
+        const j=(aoa[k]||[]).map(c=>c==null?"":String(c)).join(" ");
+        const mm=j.match(/=\s*(\d+)\s*days/i); if(mm){fromOrder=+mm[1];break;}
+      }
+      const days=[14,16,18,20,22].map(c=>typeof row[c]==="number"?row[c]:0);
+      rows.push({name:m.replace(/\s+/g," ").trim(), days, total:typeof row[24]==="number"?row[24]:days.reduce((a,b)=>a+b,0), fromOrder});
+    }
+  }
+  if(!rows.length) return null;
+  return {stages:["Greige","Dyeing + trims","RM transit","Sewing (FG)","FG shipping → DC"], rows};
 }
 
 let AXIS_START,AXIS_END,SPAN,MARKS;
@@ -188,10 +223,37 @@ function bindTip(el,text){
   el.addEventListener("mouseleave",()=>{tip.style.opacity=0;});
 }
 
-let currentModels=null;
+let currentModels=null, BREAKDOWN=null;
+function renderBreakdown(bd){
+  const el=$("breakdown");
+  if(!bd||!bd.rows.length){el.style.display="none";return;}
+  el.style.display="block";
+  const cols=["var(--greige)","var(--dyed)","var(--transit)","var(--fg)","var(--transport)"];
+  const maxTotal=Math.max(...bd.rows.map(r=>r.total));
+  const fos=bd.rows.map(r=>r.fromOrder).filter(v=>v!=null);
+  const mn=Math.min(...fos),mx=Math.max(...fos);
+  const nice=n=>/normal/i.test(n)?"Current (normal)":/progressive/i.test(n)?"Progressive (new)":n;
+  let html=`<div class="bd-h">Leadtime breakdown — calendar days</div>`;
+  bd.rows.forEach(r=>{
+    const segs=r.days.map((d,i)=>{
+      if(!d) return "";
+      const wf=(d/r.total*100), show=(d/maxTotal*100)>3.2;
+      const op=i===0?";opacity:.55":"";
+      return `<div class="bd-seg" title="${bd.stages[i]}: ${d} days" style="width:${wf}%;background:${cols[i]}${op}">${show?d:""}</div>`;
+    }).join("");
+    let bc="var(--ink2)",bg="var(--panel)";
+    if(r.fromOrder!=null){if(r.fromOrder===mn){bc="#0f6e56";bg="rgba(15,110,86,.14)";}else if(r.fromOrder===mx){bc="#a32d2d";bg="rgba(163,45,45,.13)";}}
+    const badge=r.fromOrder!=null?`<span class="bd-badge" style="color:${bc};background:${bg}">${r.fromOrder} days from FG order</span>`:`<span class="bd-badge" style="color:var(--ink2)">${r.total} days</span>`;
+    html+=`<div class="bd-row"><div class="bd-lab">${nice(r.name)}</div><div class="bd-track"><div class="bd-fill" style="width:${r.total/maxTotal*100}%">${segs}</div></div>${badge}</div>`;
+  });
+  html+=`<div class="bd-cap">Greige (faded) is booked in advance, so the highlighted figure is the order-to-delivery lead time. Colours match the timeline legend.</div>`;
+  el.innerHTML=html;
+}
+
 function render(models){
   if(!models.length){showMsg("No Model found in this sheet. Please check the selected sheet.","err");return;}
   currentModels=models;
+  renderBreakdown(BREAKDOWN);
   const showDates=$("datesTog").checked;
   computeAxis(models);
   const ltvals=models.map(m=>m.lt).filter(v=>v!=null);
@@ -281,7 +343,8 @@ function renderSheet(name){
     const ws=workbook.Sheets[name];
     const aoa=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,cellDates:true,defval:null});
     fillMergedB(aoa, ws["!merges"]);
-    const models=parseSheet(aoa);
+    const {models,breakdown}=parseSheet(aoa);
+    BREAKDOWN=breakdown;
     if(models.length){showMsg(`Loaded ${models.length} Model(s) from sheet “${name}”.`,"ok");render(models);}
     else showMsg(`No recognizable Model in sheet “${name}”. Try another sheet.`,"err");
   }catch(e){showMsg("Error reading sheet: "+e.message,"err");}
@@ -300,9 +363,10 @@ $("file").addEventListener("change",e=>{if(e.target.files[0])handleFile(e.target
 ["dragleave","drop"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove("over");}));
 drop.addEventListener("drop",e=>{const f=e.dataTransfer.files[0];if(f)handleFile(f);});
 $("sheetSel").addEventListener("change",e=>renderSheet(e.target.value));
-$("sampleBtn").addEventListener("click",()=>{showMsg("Showing sample data.","ok");render(SAMPLE);});
+$("sampleBtn").addEventListener("click",()=>{showMsg("Showing sample data.","ok");BREAKDOWN=SAMPLE_BD;render(SAMPLE);});
 $("datesTog").addEventListener("change",()=>{if(currentModels)render(currentModels);});
 
+BREAKDOWN=SAMPLE_BD;
 render(SAMPLE);
 </script>
 </body>
