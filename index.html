@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Production Timeline — drop an Excel file to draw the chart</title>
+<style>
+  :root{
+    --bg:#ffffff;--panel:#f7f8fa;--ink:#1c2024;--ink2:#5b6470;--muted:#8a929c;
+    --line:#e4e7eb;--grid:#eef0f3;--accent:#2a78d6;
+    --greige:#2a78d6;--dyed:#4a3aa7;--transit:#888780;--fg:#1baf7a;--transport:#eda100;
+    --exf:#0f6e56;--store:#854f0b;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{--bg:#0f1216;--panel:#171b20;--ink:#e8eaed;--ink2:#a6adb6;--muted:#727a84;--line:#262b31;--grid:#1d2227;}
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.5;padding:28px 20px 48px;}
+  .wrap{max-width:1080px;margin:0 auto;}
+  h1{font-size:22px;font-weight:600;margin:0 0 4px;}
+  .lead{font-size:14px;color:var(--ink2);margin:0 0 18px;}
+  .drop{border:2px dashed var(--line);border-radius:12px;background:var(--panel);
+    padding:22px;text-align:center;color:var(--ink2);cursor:pointer;transition:.15s;margin-bottom:14px;}
+  .drop:hover,.drop.over{border-color:var(--accent);color:var(--ink);}
+  .drop b{color:var(--ink);}
+  .drop input{display:none;}
+  .bar-tools{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:14px;font-size:13px;color:var(--ink2);}
+  select,button{font:inherit;font-size:13px;color:var(--ink);background:var(--bg);
+    border:1px solid var(--line);border-radius:8px;padding:6px 10px;cursor:pointer;}
+  button:hover,select:hover{border-color:var(--accent);}
+  .msg{font-size:13px;padding:8px 12px;border-radius:8px;margin-bottom:12px;display:none;}
+  .msg.err{display:block;background:rgba(163,45,45,.12);color:#a32d2d;}
+  .msg.ok{display:block;background:rgba(15,110,86,.12);color:#0f6e56;}
+  .legend{display:flex;flex-wrap:wrap;gap:14px;margin:16px 0;font-size:12.5px;color:var(--ink2);}
+  .legend span{display:flex;align-items:center;gap:6px;}
+  .sw{width:12px;height:12px;border-radius:3px;display:inline-block;}
+  .mk{font-size:13px;line-height:1;}
+  .months{position:relative;height:20px;margin-left:120px;border-bottom:1px solid var(--line);}
+  .months .m{position:absolute;top:0;height:100%;border-left:1px solid var(--grid);}
+  .months .ml{position:absolute;top:2px;font-size:11px;color:var(--muted);}
+  .mhead{display:flex;align-items:center;gap:10px;margin:18px 0 6px;flex-wrap:wrap;}
+  .mhead .nm{font-size:15px;font-weight:600;}
+  .mhead .sub{font-size:12.5px;color:var(--ink2);}
+  .mhead .lt{font-size:12px;font-weight:600;padding:2px 10px;border-radius:11px;}
+  .row{display:flex;align-items:center;padding:3px 0;border-bottom:1px solid var(--grid);}
+  .row .lab{width:120px;flex:0 0 120px;font-size:11.5px;padding-right:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .grow .lab{color:var(--muted);}
+  .track{position:relative;flex:1;height:17px;}
+  .row.dated{padding-top:15px;}
+  .track .g{position:absolute;top:0;bottom:0;border-left:1px solid var(--grid);}
+  .dlab{position:absolute;top:-13px;font-size:9.5px;color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums;}
+  .dtick{position:absolute;top:-2px;height:5px;border-left:1px solid var(--muted);opacity:.6;}
+  .barx{position:absolute;top:3px;height:11px;border-radius:2px;}
+  .grbar{position:absolute;top:2px;height:11px;border-radius:3px;opacity:.5;}
+  .flag,.star{position:absolute;transform:translateX(-50%);}
+  .flag{top:-1px;width:0;height:0;}
+  .star{top:1px;font-size:12px;line-height:1;color:var(--store);}
+  .foot{font-size:12px;color:var(--muted);margin-top:22px;line-height:1.6;}
+  .tip{position:fixed;z-index:50;pointer-events:none;background:var(--ink);color:var(--bg);
+    font-size:12px;padding:5px 9px;border-radius:6px;white-space:nowrap;opacity:0;transition:opacity .1s;
+    transform:translate(-50%,-130%);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Production Timeline — schedule chart by scenario</h1>
+  <p class="lead">Drag &amp; drop an Excel file (the “Database” sheet) into the box below. The page reads each Model and draws a Gantt chart of the full production process.</p>
+
+  <label class="drop" id="drop">
+    <b>Drop a .xlsx file here</b> or click to choose a file
+    <input type="file" id="file" accept=".xlsx,.xls">
+  </label>
+
+  <div class="bar-tools" id="tools" style="display:none;">
+    <span>Sheet:</span>
+    <select id="sheetSel"></select>
+    <button id="sampleBtn">View sample data</button>
+  </div>
+
+  <div class="msg" id="msg"></div>
+
+  <div class="bar-tools" id="opts">
+    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="datesTog" checked style="cursor:pointer;"> Show dates for each stage</label>
+  </div>
+
+  <div id="legend" style="display:none;" class="legend">
+    <span><i class="sw" style="background:var(--greige)"></i>Greige (grey fabric)</span>
+    <span><i class="sw" style="background:var(--dyed)"></i>Dyeing + trims</span>
+    <span><i class="sw" style="background:var(--transit)"></i>RM transit</span>
+    <span><i class="sw" style="background:var(--fg)"></i>Sewing (FG)</span>
+    <span><i class="sw" style="background:var(--transport)"></i>FG shipping → DC</span>
+    <span><i class="mk" style="color:var(--exf)">▲</i>Ex-factory</span>
+    <span><i class="mk" style="color:var(--store)">★</i>In store</span>
+  </div>
+
+  <div class="months" id="months" style="display:none;"></div>
+  <div id="gantt"></div>
+
+  <p class="foot" id="foot"></p>
+</div>
+
+<div class="tip" id="tip"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+const COL={dyed:"var(--dyed)",transit:"var(--transit)",fg:"var(--fg)",transport:"var(--transport)"};
+const NAME={dyed:"Dyeing + trims",transit:"RM transit",fg:"Sewing (FG)",transport:"FG shipping → DC"};
+
+const SAMPLE=[
+ {title:"Model 1: Current method", lt:123, greige:["2026-05-19","2026-07-03"], rows:[
+   {l:"Batch 1", dyed:["2026-06-22","2026-07-20"],transit:["2026-07-21","2026-07-28"],fg:["2026-07-29","2026-09-15"],transport:["2026-09-16","2026-11-15"],store:"2026-12-15"},
+   {l:"Batch 2", dyed:["2026-07-21","2026-08-18"],transit:["2026-08-19","2026-08-26"],fg:["2026-09-16","2026-10-14"],transport:["2026-10-15","2026-12-14"],store:"2027-01-14"},
+   {l:"Batch 3", dyed:["2026-08-19","2026-09-16"],transit:["2026-09-17","2026-09-24"],fg:["2026-10-15","2026-11-12"],transport:["2026-11-13","2027-01-12"],store:"2027-02-12"}]},
+ {title:"Model 2: Progressive leadtime", lt:93, greige:["2026-05-19","2026-07-03"], rows:[
+   {l:"B1 · impl",   dyed:["2026-06-28","2026-07-12"],transit:["2026-07-13","2026-07-16"],fg:["2026-07-17","2026-08-07"],transport:["2026-08-08","2026-10-02"],store:"2026-12-15"},
+   {l:"B1 · impl 2", dyed:["2026-07-13","2026-07-27"],transit:["2026-07-28","2026-07-31"],fg:["2026-08-08","2026-08-29"],transport:["2026-08-30","2026-10-24"]},
+   {l:"B1 · repl",   dyed:["2026-07-28","2026-08-11"],transit:["2026-08-12","2026-08-15"],fg:["2026-08-30","2026-09-20"],transport:["2026-09-21","2026-11-15"]},
+   {l:"Batch 2",     dyed:["2026-08-18","2026-09-01"],transit:["2026-09-04","2026-09-07"],fg:["2026-09-21","2026-10-12"],transport:["2026-10-13","2026-12-07"],store:"2027-01-07"},
+   {l:"Batch 3",     dyed:["2026-09-18","2026-10-02"],transit:["2026-10-03","2026-10-06"],fg:["2026-10-13","2026-11-03"],transport:["2026-11-04","2026-12-29"],store:"2027-01-29"}]},
+ {title:"Model 3: New method · rolling PO", lt:83, greige:["2026-05-19","2026-07-03"], rows:[
+   {l:"PO 001",  dyed:["2026-06-28","2026-07-12"],transit:["2026-07-13","2026-07-16"],fg:["2026-07-17","2026-08-07"],transport:["2026-08-08","2026-10-02"],store:"2026-12-15"},
+   {l:"PO 001b", dyed:["2026-07-13","2026-07-27"],transit:["2026-07-28","2026-07-31"],fg:["2026-08-08","2026-08-29"],transport:["2026-08-30","2026-10-24"]},
+   {l:"PO 001c", dyed:["2026-07-28","2026-08-11"],transit:["2026-08-12","2026-08-15"],fg:["2026-08-30","2026-09-20"],transport:["2026-09-21","2026-11-15"]},
+   {l:"PO 002",  dyed:["2026-08-18","2026-09-01"],transit:["2026-09-04","2026-09-07"],fg:["2026-09-21","2026-10-12"],transport:["2026-10-13","2026-11-27"],store:"2026-12-28"},
+   {l:"PO 003",  dyed:["2026-09-08","2026-09-22"],transit:["2026-09-23","2026-09-26"],fg:["2026-10-13","2026-11-03"],transport:["2026-11-04","2026-12-19"],store:"2027-01-19"},
+   {l:"PO 004",  dyed:["2026-09-29","2026-10-13"],transit:["2026-10-14","2026-10-17"],fg:["2026-11-04","2026-11-25"],transport:["2026-11-26","2027-01-10"],store:"2027-02-10"},
+   {l:"PO 005",  dyed:["2026-10-20","2026-11-03"],transit:["2026-11-04","2026-11-07"],fg:["2026-11-26","2026-12-17"],transport:["2026-12-18","2027-02-01"]},
+   {l:"PO 006",  dyed:["2026-11-10","2026-11-25"],transit:["2026-11-26","2026-11-29"],fg:["2026-12-18","2027-01-08"],transport:["2027-01-09","2027-02-23"]},
+   {l:"PO 007",  dyed:["2026-12-01","2026-12-15"],transit:["2026-12-16","2026-12-19"],fg:["2026-12-20","2027-01-10"],transport:["2027-01-11","2027-02-25"]},
+   {l:"PO 008",  dyed:["2026-12-22","2027-01-05"],transit:["2027-01-06","2027-01-09"],fg:["2027-01-10","2027-01-31"],transport:["2027-02-01","2027-03-18"]}]}
+];
+
+const $=id=>document.getElementById(id);
+const isDate=v=>v instanceof Date && !isNaN(v);
+const rnd=d=>new Date(Math.round(d.getTime()/864e5)*864e5);
+const iso=d=>{d=rnd(d);const z=n=>String(n).padStart(2,"0");return d.getUTCFullYear()+"-"+z(d.getUTCMonth()+1)+"-"+z(d.getUTCDate());};
+const pair=(r,a,b)=>(isDate(r[a])&&isDate(r[b]))?[iso(r[a]),iso(r[b])]:null;
+const firstStr=(...xs)=>{for(const x of xs){if(x!=null){const s=String(x).trim();if(s)return s;}}return "";};
+
+function parseSheet(aoa){
+  const models=[]; let cur=null;
+  for(const row of aoa){
+    if(!row) continue;
+    const b=firstStr(row[1]);
+    if(/^model\s*\d/i.test(b)){
+      const joined=row.map(c=>c==null?"":String(c)).join(" ");
+      const lm=joined.match(/=\s*(\d+)\s*days/i);
+      cur={title:b.replace(/\s*[-–].*leadtime.*$/i,"").trim()||b, lt:lm?+lm[1]:null, greige:null, rows:[]};
+      models.push(cur); continue;
+    }
+    if(!cur) continue;
+    if(/selection of season/i.test(b) && isDate(row[8]) && isDate(row[9])){
+      cur.greige=[iso(row[8]),iso(row[9])]; continue;
+    }
+    if(isDate(row[20])){
+      cur.rows.push({
+        l:firstStr(row[1],row[11],row[2]),
+        dyed:pair(row,16,17), transit:pair(row,18,19),
+        fg:pair(row,20,21), transport:pair(row,22,23),
+        store:isDate(row[24])?iso(row[24]):null
+      });
+    }
+  }
+  models.forEach(m=>{let n=0;m.rows.forEach(r=>{n++;if(!r.l)r.l="Lot "+n;});});
+  return models.filter(m=>m.rows.length);
+}
+
+let AXIS_START,AXIS_END,SPAN,MARKS;
+const pct=d=>((new Date(d)-AXIS_START)/SPAN*100);
+const fmt=d=>{const x=new Date(d);const z=n=>String(n).padStart(2,"0");return z(x.getDate())+"/"+z(x.getMonth()+1)+"/"+x.getFullYear();};
+const fmtShort=d=>{const x=new Date(d);const z=n=>String(n).padStart(2,"0");return z(x.getDate())+"/"+z(x.getMonth()+1);};
+
+function computeAxis(models){
+  let min=Infinity,max=-Infinity;
+  const eat=s=>{if(!s)return;const t=+new Date(s);if(t<min)min=t;if(t>max)max=t;};
+  models.forEach(m=>{if(m.greige){eat(m.greige[0]);eat(m.greige[1]);}
+    m.rows.forEach(r=>{["dyed","transit","fg","transport"].forEach(k=>{if(r[k]){eat(r[k][0]);eat(r[k][1]);}});eat(r.store);});});
+  AXIS_START=new Date(min-5*864e5); AXIS_END=new Date(max+10*864e5); SPAN=AXIS_END-AXIS_START;
+  MARKS=[];const d=new Date(AXIS_START.getFullYear(),AXIS_START.getMonth(),1);
+  while(d<=AXIS_END){MARKS.push([d.getFullYear(),d.getMonth()]);d.setMonth(d.getMonth()+1);}
+}
+
+const tip=$("tip");
+function bindTip(el,text){
+  el.addEventListener("mousemove",e=>{tip.textContent=text;tip.style.left=e.clientX+"px";tip.style.top=e.clientY+"px";tip.style.opacity=1;});
+  el.addEventListener("mouseleave",()=>{tip.style.opacity=0;});
+}
+
+let currentModels=null;
+function render(models){
+  if(!models.length){showMsg("No Model found in this sheet. Please check the selected sheet.","err");return;}
+  currentModels=models;
+  const showDates=$("datesTog").checked;
+  computeAxis(models);
+  const ltvals=models.map(m=>m.lt).filter(v=>v!=null);
+  const mn=Math.min(...ltvals),mx=Math.max(...ltvals);
+  const badge=lt=>{if(lt==null)return["var(--ink2)","var(--panel)"];
+    if(lt===mn)return["#0f6e56","rgba(15,110,86,.14)"];
+    if(lt===mx)return["#a32d2d","rgba(163,45,45,.13)"];
+    return["#854f0b","rgba(133,79,11,.14)"];};
+
+  const mEl=$("months");mEl.innerHTML="";mEl.style.display="block";
+  MARKS.forEach(([y,m])=>{const l=pct(new Date(y,m,1));
+    mEl.insertAdjacentHTML("beforeend",`<div class="m" style="left:${l}%"></div><div class="ml" style="left:calc(${l}% + 3px)">${m+1}/${String(y).slice(2)}</div>`);});
+  $("legend").style.display="flex";
+
+  const g=$("gantt");g.innerHTML="";
+  models.forEach(mo=>{
+    const [c,bgc]=badge(mo.lt);
+    const h=document.createElement("div");h.className="mhead";
+    h.innerHTML=`<span class="nm">${mo.title}</span>`+(mo.lt!=null?`<span class="lt" style="color:${c};background:${bgc}">${mo.lt} days total</span>`:``);
+    g.appendChild(h);
+
+    if(mo.greige){
+      const gr=document.createElement("div");gr.className="row grow";
+      gr.innerHTML=`<div class="lab">Book greige</div>`;
+      const grt=document.createElement("div");grt.className="track";
+      const gb=document.createElement("div");gb.className="grbar";
+      gb.style.left=pct(mo.greige[0])+"%";gb.style.width=(pct(mo.greige[1])-pct(mo.greige[0]))+"%";gb.style.background="var(--greige)";
+      bindTip(gb,`Greige: ${fmt(mo.greige[0])} – ${fmt(mo.greige[1])}`);
+      grt.appendChild(gb);gr.appendChild(grt);g.appendChild(gr);
+    }
+
+    mo.rows.forEach(r=>{
+      const row=document.createElement("div");row.className="row"+(showDates?" dated":"");
+      const lab=document.createElement("div");lab.className="lab";lab.textContent=r.l;lab.title=r.l;
+      const tr=document.createElement("div");tr.className="track";
+      MARKS.forEach(([y,m])=>{const d=document.createElement("div");d.className="g";d.style.left=pct(new Date(y,m,1))+"%";tr.appendChild(d);});
+      if(showDates){
+        const pts=[];
+        ["dyed","transit","fg","transport"].forEach(s=>{if(r[s]){pts.push({x:pct(r[s][0]),t:fmtShort(r[s][0])});pts.push({x:pct(r[s][1]),t:fmtShort(r[s][1])});}});
+        pts.sort((a,b)=>a.x-b.x);
+        const GAP=4.4, kept=[];
+        pts.forEach(p=>{if(!kept.length||p.x-kept[kept.length-1].x>=GAP)kept.push(p);});
+        kept.forEach((p,i)=>{
+          tr.insertAdjacentHTML("beforeend",`<div class="dtick" style="left:${p.x}%"></div>`);
+          const d=document.createElement("div");d.className="dlab";d.style.left=p.x+"%";
+          if(i===kept.length-1 && p.x>82)d.style.transform="translateX(-100%)";
+          d.textContent=p.t;tr.appendChild(d);
+        });
+      }
+      ["dyed","transit","fg","transport"].forEach(s=>{
+        if(!r[s])return;
+        const l=pct(r[s][0]),w=Math.max(pct(r[s][1])-pct(r[s][0]),0.4);
+        const b=document.createElement("div");b.className="barx";b.style.left=l+"%";b.style.width=w+"%";b.style.background=COL[s];
+        bindTip(b,`${NAME[s]}: ${fmt(r[s][0])} – ${fmt(r[s][1])}`);tr.appendChild(b);
+      });
+      if(r.fg){const f=document.createElement("div");f.className="flag";f.style.left=pct(r.fg[1])+"%";
+        f.style.borderLeft="4px solid transparent";f.style.borderRight="4px solid transparent";f.style.borderBottom="8px solid var(--exf)";
+        bindTip(f,`Ex-factory: ${fmt(r.fg[1])}`);tr.appendChild(f);}
+      if(r.store){const st=document.createElement("div");st.className="star";st.style.left=pct(r.store)+"%";st.textContent="★";
+        bindTip(st,`In store: ${fmt(r.store)}`);tr.appendChild(st);}
+      row.appendChild(lab);row.appendChild(tr);g.appendChild(row);
+    });
+  });
+  $("foot").textContent="Hover over a bar to see exact dates. Badge colour: green = shortest lead time, red = longest.";
+}
+
+function showMsg(t,k){const m=$("msg");m.textContent=t;m.className="msg "+k;}
+
+let workbook=null;
+function loadWorkbook(wb){
+  workbook=wb;
+  const sel=$("sheetSel");sel.innerHTML="";
+  wb.SheetNames.forEach(n=>{const o=document.createElement("option");o.value=n;o.textContent=n;sel.appendChild(o);});
+  const dbi=wb.SheetNames.findIndex(n=>n.trim().toLowerCase()==="database");
+  sel.selectedIndex=dbi>=0?dbi:0;
+  $("tools").style.display="flex";
+  renderSheet(sel.value);
+}
+function renderSheet(name){
+  try{
+    const ws=workbook.Sheets[name];
+    const aoa=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,cellDates:true,defval:null});
+    const models=parseSheet(aoa);
+    if(models.length){showMsg(`Loaded ${models.length} Model(s) from sheet “${name}”.`,"ok");render(models);}
+    else showMsg(`No recognizable Model in sheet “${name}”. Try another sheet.`,"err");
+  }catch(e){showMsg("Error reading sheet: "+e.message,"err");}
+}
+
+function handleFile(file){
+  const rd=new FileReader();
+  rd.onload=e=>{try{loadWorkbook(XLSX.read(new Uint8Array(e.target.result),{type:"array",cellDates:true}));}
+    catch(err){showMsg("Could not read the file: "+err.message,"err");}};
+  rd.readAsArrayBuffer(file);
+}
+
+const drop=$("drop");
+$("file").addEventListener("change",e=>{if(e.target.files[0])handleFile(e.target.files[0]);});
+["dragover","dragenter"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add("over");}));
+["dragleave","drop"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove("over");}));
+drop.addEventListener("drop",e=>{const f=e.dataTransfer.files[0];if(f)handleFile(f);});
+$("sheetSel").addEventListener("change",e=>renderSheet(e.target.value));
+$("sampleBtn").addEventListener("click",()=>{showMsg("Showing sample data.","ok");render(SAMPLE);});
+$("datesTog").addEventListener("change",()=>{if(currentModels)render(currentModels);});
+
+render(SAMPLE);
+</script>
+</body>
+</html>
